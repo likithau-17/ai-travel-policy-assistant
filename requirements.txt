@@ -1,0 +1,7 @@
+pandas
+flask
+langchain
+langgraph
+sentence-transformers
+faiss-cpu
+python-dotenv
