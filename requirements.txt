@@ -5,3 +5,4 @@ langgraph
 sentence-transformers
 faiss-cpu
 python-dotenv
+google-genai
