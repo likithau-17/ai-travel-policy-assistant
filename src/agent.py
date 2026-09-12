@@ -15,12 +15,15 @@ class AgentState(TypedDict):
     question: str
     decision: str
     result: dict
+    employee_result: dict
 
 
-def decide_action(state: AgentState):
+def decide_action(state):
     question = state["question"].lower()
 
-    if "eligible" in question or "eligibility" in question:
+    if "emp" in question and ("trip" in question or "travel" in question):
+        decision = "employee_then_trip"
+    elif "eligible" in question or "eligibility" in question:
         decision = "employee_tool"
     elif "reimburse" in question or "how much" in question:
         decision = "reimbursement_tool"
@@ -31,9 +34,7 @@ def decide_action(state: AgentState):
     else:
         decision = "policy_rag"
 
-    return {
-        "decision": decision
-    }
+    return {"decision": decision}
 
 
 def run_employee_tool(state: AgentState):
@@ -59,7 +60,8 @@ def run_employee_tool(state: AgentState):
     result = check_employee_eligibility(employee_id)
 
     return {
-        "result": result
+        "employee_result": result,
+        "result": result,
     }
 
 def run_reimbursement_tool(state: AgentState):
@@ -194,6 +196,8 @@ def run_policy_rag(state: AgentState):
 def route_decision(state):
     if state["decision"] == "employee_tool":
         return "employee_tool"
+    if state["decision"] == "employee_then_trip":
+        return "employee_then_trip"
     if state["decision"] == "reimbursement_tool":
         return "reimbursement_tool"
     if state["decision"] == "trip_validation":
@@ -211,8 +215,8 @@ graph_builder = StateGraph(AgentState)
 # -------------------------
 
 graph_builder.add_node("decide", decide_action)
-
 graph_builder.add_node("employee_tool", run_employee_tool)
+graph_builder.add_node("employee_then_trip", run_employee_tool)
 graph_builder.add_node("reimbursement_tool", run_reimbursement_tool)
 graph_builder.add_node("trip_validation", run_trip_validation)
 graph_builder.add_node("policy_rag", run_policy_rag)
@@ -227,6 +231,8 @@ graph_builder.add_conditional_edges(
     "decide",
     route_decision,
 )
+
+graph_builder.add_edge("employee_then_trip", "trip_validation")
 
 
 # -------------------------
@@ -250,6 +256,7 @@ if __name__ == "__main__":
         "Is EMP001 eligible?",
         "How much can I reimburse for a 1500 India trip?",
         "Validate EMP001's 1500 India business trip.",
+        "Can EMP002 take a 2500 India business trip?",
         "What is the standard ride limit in India?",
     ]
 
