@@ -18,11 +18,27 @@ class AgentState(TypedDict):
     decision: str
     result: dict
     employee_result: dict
-    messages: list
     messages: Annotated[list, add_messages]
+
+def get_last_employee_id(messages):
+    for message in reversed(messages):
+        content = getattr(message, "content", "")
+        match = re.search(r"\bEMP\d+\b", content.upper())
+        if match:
+            return match.group(0)
+    return None
 
 def decide_action(state):
     question = state["question"].lower()
+    messages = state.get("messages", [])
+
+    current_employee_id = re.search(r"\bEMP\d+\b", question.upper())
+    previous_employee_id = get_last_employee_id(messages)
+
+    has_employee = (
+        current_employee_id is not None
+        or previous_employee_id is not None
+    )
 
     if "emp" in question and ("trip" in question or "travel" in question):
         decision = "employee_then_trip"
@@ -32,13 +48,14 @@ def decide_action(state):
         decision = "reimbursement_tool"
     elif "validate" in question:
         decision = "trip_validation"
+    elif ("trip" in question or "travel" in question) and has_employee:
+        decision = "trip_validation"
     elif "can i" in question or "allowed" in question:
         decision = "policy_rag"
     else:
         decision = "policy_rag"
 
     return {"decision": decision}
-
 
 def run_employee_tool(state: AgentState):
     question = state["question"]
@@ -124,14 +141,14 @@ def run_reimbursement_tool(state: AgentState):
 def run_trip_validation(state):
     question = state["question"]
 
-    words = question.split()
-
     employee_id = None
 
     match = re.search(r"\bEMP\d+\b", question.upper())
 
     if match:
         employee_id = match.group(0)
+    else:
+        employee_id = get_last_employee_id(state.get("messages", []))
 
     if employee_id is None:
         return {
