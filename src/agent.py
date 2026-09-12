@@ -1,7 +1,9 @@
-from typing import TypedDict
+from typing import TypedDict, Annotated
 import re
 
 from langgraph.graph import END, START, StateGraph
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph.message import add_messages
 
 from src.tools import (
     calculate_reimbursement,
@@ -16,7 +18,8 @@ class AgentState(TypedDict):
     decision: str
     result: dict
     employee_result: dict
-
+    messages: list
+    messages: Annotated[list, add_messages]
 
 def decide_action(state):
     question = state["question"].lower()
@@ -62,6 +65,16 @@ def run_employee_tool(state: AgentState):
     return {
         "employee_result": result,
         "result": result,
+        "messages": [
+            {
+                "role": "user",
+                "content": question,
+            },
+            {
+                "role": "assistant",
+                "content": str(result),
+            },
+        ],
     }
 
 def run_reimbursement_tool(state: AgentState):
@@ -248,7 +261,11 @@ graph_builder.add_edge("policy_rag", END)
 # Compile graph
 # -------------------------
 
-agent = graph_builder.compile()
+memory = MemorySaver()
+
+agent = graph_builder.compile(
+    checkpointer=memory
+)
 
 
 if __name__ == "__main__":

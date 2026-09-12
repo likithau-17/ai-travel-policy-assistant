@@ -2,12 +2,20 @@ from src.agent import agent
 
 
 def run_test(question):
-    result = agent.invoke({
-        "question": question,
-        "decision": "",
-        "result": {},
-        "employee_result": {},
-    })
+    result = agent.invoke(
+        {
+            "question": question,
+            "decision": "",
+            "result": {},
+            "employee_result": {},
+            "messages": [],
+        },
+        config={
+            "configurable": {
+                "thread_id": "test-thread"
+            }
+        },
+    )
 
     print(f"\nQuestion: {question}")
     print(f"Decision: {result['decision']}")
