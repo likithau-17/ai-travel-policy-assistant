@@ -4,12 +4,11 @@ import numpy as np
 from .embeddings import load_embedding_model, generate_embeddings
 from .ingestion import build_chunks
 
-from pathlib import Path
-import pickle
 
-VECTOR_STORE_DIR = Path("vector_store")
-INDEX_PATH = VECTOR_STORE_DIR / "policy.index"
-CHUNKS_PATH = VECTOR_STORE_DIR / "chunks.pkl"
+VECTOR_STORE_DIR = "vector_store"
+INDEX_PATH = f"{VECTOR_STORE_DIR}/policy.index"
+CHUNKS_PATH = f"{VECTOR_STORE_DIR}/chunks.pkl"
+
 
 def build_vector_index(embeddings):
     dimension = embeddings.shape[1]
@@ -18,6 +17,29 @@ def build_vector_index(embeddings):
     index.add(embeddings.astype("float32"))
 
     return index
+
+
+def save_vector_store(index, chunks):
+    import pickle
+    from pathlib import Path
+
+    Path(VECTOR_STORE_DIR).mkdir(parents=True, exist_ok=True)
+
+    faiss.write_index(index, INDEX_PATH)
+
+    with open(CHUNKS_PATH, "wb") as file:
+        pickle.dump(chunks, file)
+
+
+def load_vector_store():
+    import pickle
+
+    index = faiss.read_index(INDEX_PATH)
+
+    with open(CHUNKS_PATH, "rb") as file:
+        chunks = pickle.load(file)
+
+    return index, chunks
 
 
 def search(query, model, index, chunks, top_k=3):
@@ -40,22 +62,33 @@ def search(query, model, index, chunks, top_k=3):
 
     return results
 
-def save_vector_store(index, chunks):
-    VECTOR_STORE_DIR.mkdir(parents=True, exist_ok=True)
+def retrieve_policy(query, model, index, chunks, top_k=3):
+    results = search(
+        query=query,
+        model=model,
+        index=index,
+        chunks=chunks,
+        top_k=top_k,
+    )
 
-    faiss.write_index(index, str(INDEX_PATH))
+    retrieved = []
 
-    with open(CHUNKS_PATH, "wb") as file:
-        pickle.dump(chunks, file)
+    for result in results:
+        chunk = result["chunk"]
 
+        retrieved.append(
+            {
+                "text": chunk["text"],
+                "source": chunk["metadata"]["source"],
+                "section": chunk["metadata"]["section_title"],
+                "country": chunk["metadata"]["country"],
+                "policy_type": chunk["metadata"]["policy_type"],
+                "distance": result["distance"],
+            }
+        )
 
-def load_vector_store():
-    index = faiss.read_index(str(INDEX_PATH))
+    return retrieved
 
-    with open(CHUNKS_PATH, "rb") as file:
-        chunks = pickle.load(file)
-
-    return index, chunks
 
 if __name__ == "__main__":
     chunks = build_chunks()
