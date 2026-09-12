@@ -4,6 +4,12 @@ import numpy as np
 from embeddings import load_embedding_model, generate_embeddings
 from ingestion import build_chunks
 
+from pathlib import Path
+import pickle
+
+VECTOR_STORE_DIR = Path("vector_store")
+INDEX_PATH = VECTOR_STORE_DIR / "policy.index"
+CHUNKS_PATH = VECTOR_STORE_DIR / "chunks.pkl"
 
 def build_vector_index(embeddings):
     dimension = embeddings.shape[1]
@@ -34,6 +40,22 @@ def search(query, model, index, chunks, top_k=3):
 
     return results
 
+def save_vector_store(index, chunks):
+    VECTOR_STORE_DIR.mkdir(parents=True, exist_ok=True)
+
+    faiss.write_index(index, str(INDEX_PATH))
+
+    with open(CHUNKS_PATH, "wb") as file:
+        pickle.dump(chunks, file)
+
+
+def load_vector_store():
+    index = faiss.read_index(str(INDEX_PATH))
+
+    with open(CHUNKS_PATH, "rb") as file:
+        chunks = pickle.load(file)
+
+    return index, chunks
 
 if __name__ == "__main__":
     chunks = build_chunks()
@@ -43,26 +65,9 @@ if __name__ == "__main__":
 
     index = build_vector_index(embeddings)
 
-    print("\nFAISS index created.")
+    save_vector_store(index, chunks)
+
+    print("\nFAISS vector store saved.")
     print("Indexed chunks:", index.ntotal)
-
-    query = "What is the standard ride limit in India?"
-
-    results = search(
-        query=query,
-        model=model,
-        index=index,
-        chunks=chunks,
-        top_k=3,
-    )
-
-    print(f"\nQuery: {query}")
-
-    for rank, result in enumerate(results, start=1):
-        chunk = result["chunk"]
-
-        print(f"\n--- Result {rank} ---")
-        print(f"Distance: {result['distance']:.4f}")
-        print(f"Source: {chunk['metadata']['source']}")
-        print(f"Section: {chunk['metadata']['section_title']}")
-        print(f"Text:\n{chunk['text']}")
+    print("Index path:", INDEX_PATH)
+    print("Chunks path:", CHUNKS_PATH)
