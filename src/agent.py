@@ -40,10 +40,10 @@ def decide_action(state):
         or previous_employee_id is not None
     )
 
-    if "emp" in question and ("trip" in question or "travel" in question):
-        decision = "employee_then_trip"
-    elif "eligible" in question or "eligibility" in question:
+    if "eligible" in question or "eligibility" in question:
         decision = "employee_tool"
+    elif "emp" in question and ("trip" in question or "travel" in question):
+        decision = "employee_then_trip"
     elif "reimburse" in question or "how much" in question:
         decision = "reimbursement_tool"
     elif "validate" in question:
