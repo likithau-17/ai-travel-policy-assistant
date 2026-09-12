@@ -2,10 +2,12 @@ from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from tools import (
+from src.tools import (
     calculate_reimbursement,
     check_employee_eligibility,
 )
+from src.rag import answer_question, load_vector_store
+from src.embeddings import load_embedding_model
 
 class AgentState(TypedDict):
     question: str
@@ -100,6 +102,21 @@ def run_reimbursement_tool(state: AgentState):
         "result": result
     }
 
+def run_policy_rag(state: AgentState):
+    model = load_embedding_model()
+    index, chunks = load_vector_store()
+
+    result = answer_question(
+        question=state["question"],
+        model=model,
+        index=index,
+        chunks=chunks,
+    )
+
+    return {
+        "result": result
+    }
+
 def route_decision(state: AgentState):
     if state["decision"] == "employee_tool":
         return "employee_tool"
@@ -107,13 +124,40 @@ def route_decision(state: AgentState):
     if state["decision"] == "reimbursement_tool":
         return "reimbursement_tool"
 
+    if state["decision"] == "policy_rag":
+        return "policy_rag"
+
     return END
 
 
 graph_builder = StateGraph(AgentState)
 
+
+# -------------------------
+# Nodes
+# -------------------------
+
 graph_builder.add_node("decide", decide_action)
-graph_builder.add_node("employee_tool", run_employee_tool)
+
+graph_builder.add_node(
+    "employee_tool",
+    run_employee_tool,
+)
+
+graph_builder.add_node(
+    "reimbursement_tool",
+    run_reimbursement_tool,
+)
+
+graph_builder.add_node(
+    "policy_rag",
+    run_policy_rag,
+)
+
+
+# -------------------------
+# Graph flow
+# -------------------------
 
 graph_builder.add_edge(START, "decide")
 
@@ -122,14 +166,21 @@ graph_builder.add_conditional_edges(
     route_decision,
 )
 
+
+# -------------------------
+# End points
+# -------------------------
+
 graph_builder.add_edge("employee_tool", END)
 
-graph_builder.add_node(
-    "reimbursement_tool",
-    run_reimbursement_tool,
-)
-
 graph_builder.add_edge("reimbursement_tool", END)
+
+graph_builder.add_edge("policy_rag", END)
+
+
+# -------------------------
+# Compile graph
+# -------------------------
 
 agent = graph_builder.compile()
 
@@ -137,9 +188,8 @@ agent = graph_builder.compile()
 if __name__ == "__main__":
     questions = [
         "Is EMP001 eligible?",
-        "Is EMP004 eligible?",
         "How much can I reimburse for a 1500 India trip?",
-        "How much can I reimburse for a 2500 India trip?",
+        "What is the standard ride limit in India?",
     ]
 
     for question in questions:
