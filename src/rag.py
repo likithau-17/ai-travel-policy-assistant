@@ -90,6 +90,75 @@ def retrieve_policy(query, model, index, chunks, top_k=3):
     return retrieved
 
 
+def build_context(retrieved_results):
+    context_parts = []
+
+    for result in retrieved_results:
+        context_parts.append(
+            f"Source: {result['source']}\n"
+            f"Section: {result['section']}\n"
+            f"Policy:\n{result['text']}"
+        )
+
+    return "\n\n---\n\n".join(context_parts)
+
+
+def answer_question(question, model, index, chunks):
+    from .gemini import generate_answer
+
+    retrieved_results = retrieve_policy(
+        query=question,
+        model=model,
+        index=index,
+        chunks=chunks,
+    )
+
+    context = build_context(retrieved_results)
+
+    answer = generate_answer(
+        question=question,
+        context=context,
+    )
+
+    return {
+        "answer": answer,
+        "sources": [
+            {
+                "source": result["source"],
+                "section": result["section"],
+            }
+            for result in retrieved_results
+        ],
+    }
+
+def answer_question(question, model, index, chunks):
+    from .gemini import generate_answer
+
+    retrieved_results = retrieve_policy(
+        query=question,
+        model=model,
+        index=index,
+        chunks=chunks,
+    )
+
+    context = build_context(retrieved_results)
+
+    answer = generate_answer(
+        question=question,
+        context=context,
+    )
+
+    return {
+        "answer": answer,
+        "sources": [
+            {
+                "source": result["source"],
+                "section": result["section"],
+            }
+            for result in retrieved_results
+        ],
+    }
+
 if __name__ == "__main__":
     chunks = build_chunks()
 
