@@ -1,8 +1,8 @@
 import faiss
 import numpy as np
 
-from embeddings import load_embedding_model, generate_embeddings
-from ingestion import build_chunks
+from .embeddings import load_embedding_model, generate_embeddings
+from .ingestion import build_chunks
 
 from pathlib import Path
 import pickle
