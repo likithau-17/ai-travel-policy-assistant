@@ -2,8 +2,10 @@ from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from tools import check_employee_eligibility
-
+from tools import (
+    calculate_reimbursement,
+    check_employee_eligibility,
+)
 
 class AgentState(TypedDict):
     question: str
@@ -54,10 +56,56 @@ def run_employee_tool(state: AgentState):
         "result": result
     }
 
+def run_reimbursement_tool(state: AgentState):
+    question = state["question"].lower()
+
+    country = None
+
+    if "india" in question:
+        country = "India"
+    elif "us" in question or "usa" in question:
+        country = "US"
+
+    if country is None:
+        return {
+            "result": {
+                "valid": False,
+                "status": "Invalid",
+                "message": "No supported country was found in the question.",
+            }
+        }
+
+    amount = None
+
+    for word in question.replace(",", "").split():
+        cleaned = word.strip("₹$?.!")
+        try:
+            amount = float(cleaned)
+            break
+        except ValueError:
+            continue
+
+    if amount is None:
+        return {
+            "result": {
+                "valid": False,
+                "status": "Invalid",
+                "message": "No trip amount was found in the question.",
+            }
+        }
+
+    result = calculate_reimbursement(country, amount)
+
+    return {
+        "result": result
+    }
 
 def route_decision(state: AgentState):
     if state["decision"] == "employee_tool":
         return "employee_tool"
+
+    if state["decision"] == "reimbursement_tool":
+        return "reimbursement_tool"
 
     return END
 
@@ -76,6 +124,13 @@ graph_builder.add_conditional_edges(
 
 graph_builder.add_edge("employee_tool", END)
 
+graph_builder.add_node(
+    "reimbursement_tool",
+    run_reimbursement_tool,
+)
+
+graph_builder.add_edge("reimbursement_tool", END)
+
 agent = graph_builder.compile()
 
 
@@ -83,7 +138,8 @@ if __name__ == "__main__":
     questions = [
         "Is EMP001 eligible?",
         "Is EMP004 eligible?",
-        "Is EMP999 eligible?",
+        "How much can I reimburse for a 1500 India trip?",
+        "How much can I reimburse for a 2500 India trip?",
     ]
 
     for question in questions:
