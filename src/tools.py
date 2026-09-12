@@ -31,6 +31,77 @@ def check_employee_eligibility(employee_id):
         "manager_approval": record["manager_approval"],
     }
 
+def validate_trip(employee_id, country, trip_amount, business_purpose):
+    employee = check_employee_eligibility(employee_id)
+
+    if not employee["found"]:
+        return {
+            "valid": False,
+            "status": "Invalid",
+            "reason": "Employee ID not found.",
+        }
+
+    if employee["country"].lower() != country.lower():
+        return {
+            "valid": False,
+            "status": "Invalid",
+            "reason": "Employee country does not match the trip country.",
+        }
+
+    if employee["eligibility_status"] == "Not Eligible":
+        return {
+            "valid": False,
+            "status": "Not Eligible",
+            "reason": "Employee is not eligible for company travel.",
+        }
+
+    if not business_purpose:
+        return {
+            "valid": False,
+            "status": "Not Reimbursable",
+            "reason": "The trip does not have an approved business purpose.",
+        }
+
+    limits = {
+        "India": 2000,
+        "US": 75,
+    }
+
+    limit = limits.get(country)
+
+    if limit is None:
+        return {
+            "valid": False,
+            "status": "Invalid",
+            "reason": "No spending limit is defined for this country.",
+        }
+
+    if trip_amount > limit:
+        return {
+            "valid": False,
+            "status": "Needs Approval",
+            "reason": f"Trip amount exceeds the standard {country} limit of {limit}.",
+            "standard_limit": limit,
+            "trip_amount": trip_amount,
+        }
+
+    if employee["eligibility_status"] == "Approval Required":
+        return {
+            "valid": False,
+            "status": "Needs Approval",
+            "reason": "Employee requires approval before travel.",
+            "standard_limit": limit,
+            "trip_amount": trip_amount,
+        }
+
+    return {
+        "valid": True,
+        "status": "Within Policy",
+        "reason": "Trip is within the standard policy limit and employee is eligible.",
+        "standard_limit": limit,
+        "trip_amount": trip_amount,
+    }
+
 
 if __name__ == "__main__":
     result = check_employee_eligibility("EMP001")
