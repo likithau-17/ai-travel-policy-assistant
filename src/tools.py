@@ -31,6 +31,7 @@ def check_employee_eligibility(employee_id):
         "manager_approval": record["manager_approval"],
     }
 
+
 def validate_trip(employee_id, country, trip_amount, business_purpose):
     employee = check_employee_eligibility(employee_id)
 
@@ -102,6 +103,44 @@ def validate_trip(employee_id, country, trip_amount, business_purpose):
         "trip_amount": trip_amount,
     }
 
+def calculate_reimbursement(country, trip_amount):
+    limits = {
+        "India": 2000,
+        "US": 75,
+    }
+
+    limit = limits.get(country)
+
+    if limit is None:
+        return {
+            "valid": False,
+            "status": "Invalid",
+            "reason": "No reimbursement limit is defined for this country.",
+        }
+
+    reimbursable_amount = min(trip_amount, limit)
+    excess_amount = max(trip_amount - limit, 0)
+
+    if excess_amount > 0:
+        status = "Needs Approval"
+        reason = (
+            f"Trip exceeds the standard {country} limit of {limit}. "
+            "The excess amount requires approval or review."
+        )
+    else:
+        status = "Within Policy"
+        reason = "Trip amount is within the standard reimbursement limit."
+
+    return {
+        "valid": True,
+        "status": status,
+        "country": country,
+        "trip_amount": trip_amount,
+        "standard_limit": limit,
+        "reimbursable_amount": reimbursable_amount,
+        "excess_amount": excess_amount,
+        "reason": reason,
+    }
 
 if __name__ == "__main__":
     result = check_employee_eligibility("EMP001")
