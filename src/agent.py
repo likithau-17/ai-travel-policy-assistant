@@ -2,10 +2,13 @@ from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from tools import check_employee_eligibility
+
 
 class AgentState(TypedDict):
     question: str
     decision: str
+    result: dict
 
 
 def decide_action(state: AgentState):
@@ -25,12 +28,53 @@ def decide_action(state: AgentState):
     }
 
 
+def run_employee_tool(state: AgentState):
+    question = state["question"]
+
+    words = question.split()
+
+    employee_id = None
+
+    for word in words:
+        if word.upper().startswith("EMP"):
+            employee_id = word.strip("?.!,").upper()
+            break
+
+    if employee_id is None:
+        return {
+            "result": {
+                "found": False,
+                "message": "No employee ID was found in the question.",
+            }
+        }
+
+    result = check_employee_eligibility(employee_id)
+
+    return {
+        "result": result
+    }
+
+
+def route_decision(state: AgentState):
+    if state["decision"] == "employee_tool":
+        return "employee_tool"
+
+    return END
+
+
 graph_builder = StateGraph(AgentState)
 
 graph_builder.add_node("decide", decide_action)
+graph_builder.add_node("employee_tool", run_employee_tool)
 
 graph_builder.add_edge(START, "decide")
-graph_builder.add_edge("decide", END)
+
+graph_builder.add_conditional_edges(
+    "decide",
+    route_decision,
+)
+
+graph_builder.add_edge("employee_tool", END)
 
 agent = graph_builder.compile()
 
@@ -38,16 +82,17 @@ agent = graph_builder.compile()
 if __name__ == "__main__":
     questions = [
         "Is EMP001 eligible?",
-        "How much can I reimburse?",
-        "Are airport trips allowed?",
-        "What is the travel policy?",
+        "Is EMP004 eligible?",
+        "Is EMP999 eligible?",
     ]
 
     for question in questions:
         result = agent.invoke({
             "question": question,
             "decision": "",
+            "result": {},
         })
 
         print(f"\nQuestion: {question}")
         print(f"Decision: {result['decision']}")
+        print(f"Result: {result['result']}")
