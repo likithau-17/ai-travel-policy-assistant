@@ -1,4 +1,6 @@
 from src.agent import agent
+from unittest.mock import patch
+import uuid
 
 
 def run_test(question):
@@ -12,7 +14,7 @@ def run_test(question):
         },
         config={
             "configurable": {
-                "thread_id": "test-thread"
+                "thread_id": str(uuid.uuid4())
             }
         },
     )
@@ -65,10 +67,17 @@ def test_not_eligible_trip():
     assert result["result"]["status"] == "Not Eligible"
 
 
-def test_policy_rag():
+@patch(
+    "src.gemini.generate_answer",
+    return_value="Based on the policy context, the standard individual ride limit in India is INR 2,000.",
+)
+def test_policy_rag(mock_generate_answer):
     result = run_test("What is the standard ride limit in India?")
+
     assert "2,000" in result["result"]["answer"]
     assert len(result["result"]["sources"]) > 0
+
+    mock_generate_answer.assert_called_once()
 
 
 def test_unknown_employee():
@@ -77,14 +86,21 @@ def test_unknown_employee():
     assert result["result"]["reason"] == "Employee ID not found."
 
 
-def test_cancellation_fee_not_invented():
+@patch(
+    "src.gemini.generate_answer",
+    return_value="The policy information is insufficient to provide the specific cancellation fee.",
+)
+def test_cancellation_fee_not_invented(mock_generate_answer):
     result = run_test("What is the cancellation fee for a cancelled ride?")
+
     answer = result["result"]["answer"].lower()
 
     assert "insufficient" in answer
     assert "cancellation" in answer
     assert "fee" in answer
     assert len(result["result"]["sources"]) > 0
+
+    mock_generate_answer.assert_called_once()
 
 
 def test_unsupported_reimbursement_country():
@@ -96,7 +112,7 @@ def test_unsupported_reimbursement_country():
 def test_trip_without_employee_id():
     result = run_test("Can I take a 1000 India business trip?")
     assert result["result"]["status"] == "Invalid"
-    assert result["result"]["reason"] == "Employee ID not found."
+    assert result["result"]["reason"] == "No employee ID was found in the question."
 
 
 def test_trip_country_mismatch():
