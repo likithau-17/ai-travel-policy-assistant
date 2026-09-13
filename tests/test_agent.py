@@ -125,3 +125,73 @@ def test_trip_without_amount():
     result = run_test("Can EMP001 take an India business trip?")
     assert result["result"]["status"] == "Invalid"
     assert result["result"]["reason"] == "No trip amount was found in the question."
+
+
+def test_us_reimbursement_within_limit():
+    result = run_test("How much can I reimburse for a 50 US trip?")
+    assert result["result"]["status"] == "Within Policy"
+    assert result["result"]["reimbursable_amount"] == 50
+
+
+def test_us_reimbursement_above_limit():
+    result = run_test("How much can I reimburse for a 100 US trip?")
+    assert result["result"]["status"] == "Needs Approval"
+    assert result["result"]["reimbursable_amount"] == 75
+    assert result["result"]["excess_amount"] == 25
+
+
+def test_employee_approval_required_trip():
+    result = run_test("Can EMP002 take a 1500 India business trip?")
+    assert result["result"]["status"] == "Needs Approval"
+    assert "requires approval" in result["result"]["reason"].lower()
+
+
+def test_not_eligible_us_employee():
+    result = run_test("Can EMP004 take a 50 US business trip?")
+    assert result["result"]["status"] == "Not Eligible"
+
+
+def test_unknown_reimbursement_country():
+    result = run_test("How much can I reimburse for a 1000 Canada trip?")
+    assert result["result"]["status"] == "Invalid"
+    assert result["result"]["message"] == "No supported country was found in the question."
+
+
+@patch(
+    "src.gemini.generate_answer",
+    return_value="The policy information is insufficient to provide the specific cancellation fee.",
+)
+def test_hallucination_unknown_cancellation_fee(mock_generate_answer):
+    result = run_test("What exact cancellation fee will I be charged?")
+    answer = result["result"]["answer"].lower()
+
+    assert "insufficient" in answer
+    assert "fee" in answer
+
+    mock_generate_answer.assert_called_once()
+
+
+@patch(
+    "src.gemini.generate_answer",
+    return_value="The policy information is insufficient to provide a standard ride limit for Canada.",
+)
+def test_hallucination_unknown_country_limit(mock_generate_answer):
+    result = run_test("What is the standard ride limit in Canada?")
+    answer = result["result"]["answer"].lower()
+
+    assert "insufficient" in answer
+
+    mock_generate_answer.assert_called_once()
+
+
+@patch(
+    "src.gemini.generate_answer",
+    return_value="The policy information is insufficient to answer this question.",
+)
+def test_hallucination_unlisted_policy_rule(mock_generate_answer):
+    result = run_test("What is the weekend travel allowance for employees?")
+    answer = result["result"]["answer"].lower()
+
+    assert "insufficient" in answer
+
+    mock_generate_answer.assert_called_once()
