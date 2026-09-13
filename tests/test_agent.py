@@ -69,3 +69,19 @@ def test_policy_rag():
     result = run_test("What is the standard ride limit in India?")
     assert "2,000" in result["result"]["answer"]
     assert len(result["result"]["sources"]) > 0
+
+
+def test_unknown_employee():
+    result = run_test("Can EMP999 take a 1000 India business trip?")
+    assert result["result"]["status"] == "Invalid"
+    assert result["result"]["reason"] == "Employee ID not found."
+
+
+def test_cancellation_fee_not_invented():
+    result = run_test("What is the cancellation fee for a cancelled ride?")
+    answer = result["result"]["answer"].lower()
+
+    assert "insufficient" in answer
+    assert "cancellation" in answer
+    assert "fee" in answer
+    assert len(result["result"]["sources"]) > 0
