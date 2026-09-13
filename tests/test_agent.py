@@ -85,3 +85,27 @@ def test_cancellation_fee_not_invented():
     assert "cancellation" in answer
     assert "fee" in answer
     assert len(result["result"]["sources"]) > 0
+
+
+def test_unsupported_reimbursement_country():
+    result = run_test("How much can I reimburse for a 1000 Canada trip?")
+    assert result["result"]["status"] == "Invalid"
+    assert result["result"]["message"] == "No supported country was found in the question."
+
+
+def test_trip_without_employee_id():
+    result = run_test("Can I take a 1000 India business trip?")
+    assert result["result"]["status"] == "Invalid"
+    assert result["result"]["reason"] == "Employee ID not found."
+
+
+def test_trip_country_mismatch():
+    result = run_test("Can EMP001 take a 1000 Canada business trip?")
+    assert result["result"]["status"] == "Invalid"
+    assert result["result"]["reason"] == "Employee country does not match the trip country."
+
+
+def test_trip_without_amount():
+    result = run_test("Can EMP001 take an India business trip?")
+    assert result["result"]["status"] == "Invalid"
+    assert result["result"]["reason"] == "No trip amount was found in the question."

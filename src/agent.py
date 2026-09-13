@@ -48,7 +48,11 @@ def decide_action(state):
         decision = "reimbursement_tool"
     elif "validate" in question:
         decision = "trip_validation"
-    elif ("trip" in question or "travel" in question) and has_employee:
+    elif ("trip" in question or "travel" in question) and (
+        has_employee
+        or "can i" in question
+        or "can i take" in question
+    ):
         decision = "trip_validation"
     elif "can i" in question or "allowed" in question:
         decision = "policy_rag"
