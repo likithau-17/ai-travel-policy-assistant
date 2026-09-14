@@ -30,6 +30,19 @@ def get_last_employee_id(messages):
             return match.group(0)
     return None
 
+def get_last_country(messages):
+    for message in reversed(messages):
+        content = getattr(message, "content", "")
+        text = content.lower()
+
+        if "india" in text:
+            return "India"
+
+        if "united states" in text or "usa" in text or "us" in text:
+            return "US"
+
+    return None
+
 def decide_action(state):
     question = state["question"].lower()
     messages = state.get("messages", [])
@@ -42,25 +55,45 @@ def decide_action(state):
         or previous_employee_id is not None
     )
 
+    has_previous_trip_context = (
+        previous_employee_id is not None
+        and (
+            "trip" in str(messages).lower()
+            or "travel" in str(messages).lower()
+        )
+    )
+
     if "eligible" in question or "eligibility" in question:
         decision = "employee_tool"
-    elif current_employee_id is not None and ("trip" in question or "travel" in question):
+
+    elif current_employee_id is not None and (
+        "trip" in question or "travel" in question
+    ):
         decision = "employee_then_trip"
-    elif "reimburse" in question or "how much" in question:
-        decision = "reimbursement_tool"
-    elif "validate" in question:
-        decision = "trip_validation"
-    elif ("trip" in question or "travel" in question) and (
-        has_employee
-        or "can i" in question
-        or "can i take" in question
+
+    elif has_previous_trip_context and (
+        "what if" in question
+        or "costs" in question
+        or "cost" in question
     ):
         decision = "trip_validation"
+
+    elif "reimburse" in question or "how much" in question:
+        decision = "reimbursement_tool"
+
+    elif "validate" in question:
+        decision = "trip_validation"
+
+    elif ("trip" in question or "travel" in question) and (
+        has_employee or "can i" in question or "can i take" in question
+    ):
+        decision = "trip_validation"
+
     elif "can i" in question or "allowed" in question:
         decision = "policy_rag"
+
     else:
         decision = "policy_rag"
-
     return {"decision": decision}
 
 def run_employee_tool(state: AgentState):
@@ -154,7 +187,7 @@ def run_trip_validation(state):
     if match:
         employee_id = match.group(0)
     else:
-        employee_id = state.get("employee_id", "")
+        employee_id = get_last_employee_id(state.get("messages", []))
 
     if not employee_id:
         return {
@@ -172,13 +205,16 @@ def run_trip_validation(state):
     elif "us" in question_lower or "usa" in question_lower:
         country = "US"
     else:
-        return {
-            "result": {
-                "valid": False,
-                "status": "Invalid",
-                "reason": "No supported country was found in the question.",
+        country = get_last_country(state.get("messages", []))
+
+        if country is None:
+            return {
+                "result": {
+                    "valid": False,
+                    "status": "Invalid",
+                    "reason": "No supported country was found in the question."
+                }
             }
-        }
 
     amount = None
     for word in question_lower.replace(",", "").split():
@@ -198,11 +234,20 @@ def run_trip_validation(state):
             }
         }
 
+    messages = state.get("messages", [])
+
+    previous_context = " ".join(
+        str(getattr(message, "content", ""))
+        for message in messages
+    )
+
+    combined_context = f"{previous_context} {question_lower}"
+
     business_purpose = (
-        "business" in question_lower
-        or "work" in question_lower
-        or "client" in question_lower
-        or "meeting" in question_lower
+        "business" in combined_context
+        or "work" in combined_context
+        or "client" in combined_context
+        or "meeting" in combined_context
     )
 
     result = validate_trip(

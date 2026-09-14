@@ -195,3 +195,165 @@ def test_hallucination_unlisted_policy_rule(mock_generate_answer):
     assert "insufficient" in answer
 
     mock_generate_answer.assert_called_once()
+
+
+@patch(
+    "src.gemini.generate_answer",
+    return_value="The standard individual ride limit in the United States is USD 75 per trip.",
+)
+def test_us_standard_travel_limit(mock_generate_answer):
+    result = run_test("What is the standard travel limit in the US?")
+
+    assert "75" in result["result"]["answer"]
+    assert len(result["result"]["sources"]) > 0
+
+    mock_generate_answer.assert_called_once()
+
+
+@patch(
+    "src.gemini.generate_answer",
+    return_value="Airport trips are eligible when connected to an approved business journey.",
+)
+def test_airport_trips_allowed(mock_generate_answer):
+    result = run_test("Are airport trips allowed for business travel?")
+
+    answer = result["result"]["answer"].lower()
+
+    assert "airport" in answer
+    assert "business" in answer
+    assert len(result["result"]["sources"]) > 0
+
+    mock_generate_answer.assert_called_once()
+
+
+@patch(
+    "src.gemini.generate_answer",
+    return_value="Late-night airport trips between 10:00 PM and 6:00 AM are allowed when connected to approved business travel.",
+)
+def test_late_night_travel_allowed(mock_generate_answer):
+    result = run_test("Are late-night airport trips allowed?")
+
+    answer = result["result"]["answer"].lower()
+
+    assert "late-night" in answer
+    assert "airport" in answer
+    assert len(result["result"]["sources"]) > 0
+
+    mock_generate_answer.assert_called_once()
+
+
+@patch(
+    "src.gemini.generate_answer",
+    return_value="An expense submission should include employee ID, trip date, trip amount, currency, business purpose, trip type, and approval reference when applicable.",
+)
+def test_expense_required_information(mock_generate_answer):
+    result = run_test("What information is required for an expense?")
+
+    answer = result["result"]["answer"].lower()
+
+    assert "employee id" in answer
+    assert "trip amount" in answer
+    assert "business purpose" in answer
+    assert len(result["result"]["sources"]) > 0
+
+    mock_generate_answer.assert_called_once()
+
+
+def test_emp003_valid_50_us_airport_trip():
+    result = run_test(
+        "Can EMP003 take a 50 US airport business trip?"
+    )
+
+    assert result["result"]["status"] == "Within Policy"
+    assert result["result"]["trip_amount"] == 50
+
+
+def test_emp003_100_us_airport_trip():
+    result = run_test(
+        "Can EMP003 take a 100 US airport business trip?"
+    )
+
+    assert result["result"]["status"] == "Needs Approval"
+    assert result["result"]["standard_limit"] == 75
+    assert result["result"]["trip_amount"] == 100
+
+
+def test_memory_employee_context_follow_up():
+    thread_id = str(uuid.uuid4())
+
+    first_result = agent.invoke(
+        {
+            "question": "Is EMP001 eligible?",
+            "decision": "",
+            "result": {},
+            "employee_result": {},
+            "employee_id": "",
+            "messages": [],
+        },
+        config={
+            "configurable": {
+                "thread_id": thread_id
+            }
+        },
+    )
+
+    assert first_result["result"]["eligibility_status"] == "Eligible"
+
+    second_result = agent.invoke(
+        {
+            "question": "Can I take a 1500 India business trip?",
+            "decision": "",
+            "result": {},
+            "employee_result": {},
+            "employee_id": "",
+            "messages": [],
+        },
+        config={
+            "configurable": {
+                "thread_id": thread_id
+            }
+        },
+    )
+
+    assert second_result["result"]["status"] == "Within Policy"
+
+
+def test_memory_follow_up_cost_change():
+    thread_id = str(uuid.uuid4())
+
+    first_result = agent.invoke(
+        {
+            "question": "Can EMP001 take a 1500 India business trip?",
+            "decision": "",
+            "result": {},
+            "employee_result": {},
+            "employee_id": "",
+            "messages": [],
+        },
+        config={
+            "configurable": {
+                "thread_id": thread_id
+            }
+        },
+    )
+
+    assert first_result["result"]["status"] == "Within Policy"
+
+    second_result = agent.invoke(
+        {
+            "question": "What if it costs 2500?",
+            "decision": "",
+            "result": {},
+            "employee_result": {},
+            "employee_id": "",
+            "messages": [],
+        },
+        config={
+            "configurable": {
+                "thread_id": thread_id
+            }
+        },
+    )
+
+    assert second_result["result"]["status"] == "Needs Approval"
+    assert second_result["result"]["trip_amount"] == 2500
