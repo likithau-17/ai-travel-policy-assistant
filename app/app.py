@@ -41,6 +41,7 @@ def ask():
             "decision": "",
             "result": {},
             "employee_result": {},
+            "employee_id": "",
             "messages": [],
         },
         config={
@@ -54,6 +55,22 @@ def ask():
         "question": question,
         "decision": result["decision"],
         "result": result["result"],
+    })
+
+
+@app.route("/clear", methods=["POST"])
+def clear():
+    session["thread_id"] = str(uuid.uuid4())
+
+    return jsonify({
+        "message": "Conversation cleared."
+    })
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({
+        "status": "ok"
     })
 
 

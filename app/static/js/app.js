@@ -75,7 +75,7 @@ function formatResult(result) {
         list.appendChild(
             addListItem(
                 "Reason",
-                result.reason || "No additional information."
+                result.reason || result.message || "No additional information."
             )
         );
 

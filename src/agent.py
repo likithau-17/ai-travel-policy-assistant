@@ -2,8 +2,9 @@ from typing import TypedDict, Annotated
 import re
 
 from langgraph.graph import END, START, StateGraph
-from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph.message import add_messages
+
+from src.memory import create_memory
 
 from src.tools import (
     calculate_reimbursement,
@@ -18,6 +19,7 @@ class AgentState(TypedDict):
     decision: str
     result: dict
     employee_result: dict
+    employee_id: str
     messages: Annotated[list, add_messages]
 
 def get_last_employee_id(messages):
@@ -152,14 +154,14 @@ def run_trip_validation(state):
     if match:
         employee_id = match.group(0)
     else:
-        employee_id = get_last_employee_id(state.get("messages", []))
+        employee_id = state.get("employee_id", "")
 
-    if employee_id is None:
+    if not employee_id:
         return {
             "result": {
                 "valid": False,
                 "status": "Invalid",
-                "reason": "No employee ID was found in the question.",
+                "reason": "No employee ID was found in the question."
             }
         }
 
@@ -207,7 +209,7 @@ def run_trip_validation(state):
         employee_id=employee_id,
         country=country,
         trip_amount=amount,
-        business_purpose=business_purpose,
+        business_purpose=business_purpose
     )
 
     return {"result": result}
@@ -282,7 +284,7 @@ graph_builder.add_edge("policy_rag", END)
 # Compile graph
 # -------------------------
 
-memory = MemorySaver()
+memory = create_memory()
 
 agent = graph_builder.compile(
     checkpointer=memory
@@ -290,20 +292,27 @@ agent = graph_builder.compile(
 
 
 if __name__ == "__main__":
+    import uuid
+
+    thread_id = str(uuid.uuid4())
+
     questions = [
-        "Is EMP001 eligible?",
-        "How much can I reimburse for a 1500 India trip?",
-        "Validate EMP001's 1500 India business trip.",
-        "Can EMP002 take a 2500 India business trip?",
         "What is the standard ride limit in India?",
+        "What happens if I exceed it?",
     ]
 
     for question in questions:
-        result = agent.invoke({
-            "question": question,
-            "decision": "",
-            "result": {},
-        })
+        result = agent.invoke(
+            {
+                "question": question,
+                "decision": "",
+                "result": {},
+                "employee_result": {},
+                "employee_id": "",
+                "messages": [],
+            },
+            config={"configurable": {"thread_id": thread_id}},
+        )
 
         print(f"\nQuestion: {question}")
         print(f"Decision: {result['decision']}")
