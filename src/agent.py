@@ -187,7 +187,12 @@ def run_trip_validation(state):
     if match:
         employee_id = match.group(0)
     else:
-        employee_id = get_last_employee_id(state.get("messages", []))
+        employee_id = state.get("employee_id", "")
+
+        if not employee_id:
+            employee_id = get_last_employee_id(
+                state.get("messages", [])
+            )
 
     if not employee_id:
         return {

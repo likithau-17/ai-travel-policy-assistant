@@ -23,7 +23,7 @@ def home():
 
 @app.route("/ask", methods=["POST"])
 def ask():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     question = data.get("question", "").strip()
 
@@ -35,28 +35,36 @@ def ask():
     if "thread_id" not in session:
         session["thread_id"] = str(uuid.uuid4())
 
-    result = agent.invoke(
-        {
+    try:
+        result = agent.invoke(
+            {
+                "question": question,
+                "decision": "",
+                "result": {},
+                "employee_result": {},
+                "employee_id": "",
+                "messages": [],
+            },
+            config={
+                "configurable": {
+                    "thread_id": session["thread_id"]
+                }
+            },
+        )
+
+        return jsonify({
             "question": question,
-            "decision": "",
-            "result": {},
-            "employee_result": {},
-            "employee_id": "",
-            "messages": [],
-        },
-        config={
-            "configurable": {
-                "thread_id": session["thread_id"]
-            }
-        },
-    )
+            "decision": result["decision"],
+            "result": result["result"],
+        })
 
-    return jsonify({
-        "question": question,
-        "decision": result["decision"],
-        "result": result["result"],
-    })
+    except Exception as e:
+        app.logger.exception("Agent request failed")
 
+        return jsonify({
+            "error": "The assistant could not process your request.",
+            "details": str(e),
+        }), 500
 
 @app.route("/clear", methods=["POST"])
 def clear():
