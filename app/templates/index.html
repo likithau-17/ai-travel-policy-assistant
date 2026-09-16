@@ -1,29 +1,2789 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Travel Policy Assistant</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <title>AI Travel & Policy Assistant</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family:
+                Inter,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+            background: #f5f7fb;
+            color: #172033;
+        }
+
+        body {
+            display: flex;
+            overflow: hidden;
+        }
+
+
+        /* =====================================================
+           SIDEBAR
+        ===================================================== */
+
+        .sidebar {
+            width: 230px;
+            min-width: 230px;
+            height: 100vh;
+
+            background: #111827;
+            color: white;
+
+            display: flex;
+            flex-direction: column;
+
+            padding: 18px 10px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            padding: 0 8px 20px;
+        }
+
+        .brand-icon {
+            width: 30px;
+            height: 30px;
+
+            border-radius: 8px;
+
+            background: #6257ee;
+            color: white;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 15px;
+            font-weight: 700;
+
+            flex-shrink: 0;
+        }
+
+        .brand-name {
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .brand-subtitle {
+            font-size: 10px;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+
+        .new-chat-btn {
+            width: 100%;
+
+            border: 1px solid #374151;
+
+            background: #1f2937;
+            color: white;
+
+            border-radius: 8px;
+
+            padding: 10px 11px;
+
+            cursor: pointer;
+
+            font-size: 13px;
+
+            text-align: left;
+        }
+
+        .new-chat-btn:hover {
+            background: #293548;
+        }
+
+        .recent-title {
+            margin: 22px 8px 9px;
+
+            color: #9ca3af;
+
+            font-size: 10px;
+
+            letter-spacing: 0.08em;
+
+            text-transform: uppercase;
+        }
+
+        .history {
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .history-item {
+            width: 100%;
+
+            border: 0;
+
+            background: transparent;
+
+            color: #d1d5db;
+
+            text-align: left;
+
+            padding: 9px 10px;
+
+            border-radius: 7px;
+
+            margin-bottom: 3px;
+
+            font-size: 12px;
+
+            cursor: pointer;
+
+            white-space: nowrap;
+
+            overflow: hidden;
+
+            text-overflow: ellipsis;
+        }
+
+        .history-item:hover {
+            background: #1f2937;
+        }
+
+        .history-item.active {
+            background: #37308f;
+            color: white;
+        }
+
+        .sidebar-footer {
+            border-top: 1px solid #374151;
+
+            padding: 13px 7px 0;
+
+            color: #64748b;
+
+            font-size: 9px;
+        }
+
+
+        /* =====================================================
+           MAIN
+        ===================================================== */
+
+        .main {
+            flex: 1;
+
+            min-width: 0;
+
+            height: 100vh;
+
+            display: flex;
+
+            flex-direction: column;
+        }
+
+
+        /* =====================================================
+           TOP BAR
+        ===================================================== */
+
+        .topbar {
+            height: 48px;
+            min-height: 48px;
+
+            background: white;
+
+            border-bottom: 1px solid #e5e7eb;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            padding: 0 18px;
+        }
+
+        .topbar-title {
+            font-size: 14px;
+            font-weight: 700;
+
+            color: #172033;
+        }
+
+        .online {
+            display: flex;
+
+            align-items: center;
+
+            gap: 6px;
+
+            font-size: 11px;
+
+            color: #64748b;
+        }
+
+        .online-dot {
+            width: 6px;
+            height: 6px;
+
+            background: #22c55e;
+
+            border-radius: 50%;
+        }
+
+
+        /* =====================================================
+           CHAT AREA
+        ===================================================== */
+
+        .chat-wrapper {
+            flex: 1;
+
+            min-height: 0;
+
+            overflow-y: auto;
+
+            /*
+             * Reduced from 24px.
+             * This removes the large empty space before
+             * the first user question.
+             */
+            padding: 8px 32px 120px;
+        }
+
+        #chat {
+            width: 100%;
+
+            max-width: 1000px;
+
+            margin: 0 auto;
+        }
+
+
+        /* =====================================================
+           WELCOME
+        ===================================================== */
+
+        .welcome {
+            min-height: 58vh;
+
+            display: flex;
+
+            flex-direction: column;
+
+            align-items: center;
+
+            justify-content: center;
+
+            text-align: center;
+
+            padding: 20px 15px;
+        }
+
+        .welcome-icon {
+            width: 48px;
+            height: 48px;
+
+            border-radius: 13px;
+
+            background: #6257ee;
+
+            color: white;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            font-size: 21px;
+
+            margin-bottom: 15px;
+        }
+
+        .welcome h1 {
+            margin: 0;
+
+            font-size: 23px;
+
+            color: #172033;
+        }
+
+        .welcome p {
+            max-width: 560px;
+
+            margin: 9px 0 22px;
+
+            color: #64748b;
+
+            font-size: 14px;
+
+            line-height: 1.6;
+        }
+
+        .suggestions {
+            display: flex;
+
+            flex-wrap: wrap;
+
+            justify-content: center;
+
+            gap: 9px;
+
+            max-width: 760px;
+        }
+
+        .suggestion {
+            border: 1px solid #dbe1ea;
+
+            background: white;
+
+            color: #374151;
+
+            border-radius: 20px;
+
+            padding: 9px 14px;
+
+            font-size: 12px;
+
+            cursor: pointer;
+        }
+
+        .suggestion:hover {
+            border-color: #6257ee;
+
+            color: #4f46e5;
+        }
+
+
+        /* =====================================================
+           MESSAGE ROW
+        ===================================================== */
+
+        .message-row {
+            width: 100%;
+
+            display: flex;
+
+            /*
+             * Smaller spacing between messages.
+             */
+            margin: 8px 0;
+        }
+
+        .message-row.user {
+            justify-content: flex-end;
+
+            margin-top: 6px;
+
+            margin-bottom: 12px;
+        }
+
+        .message-row.assistant {
+            justify-content: flex-start;
+
+            margin-top: 4px;
+
+            margin-bottom: 18px;
+        }
+
+
+        /* =====================================================
+           USER MESSAGE
+        ===================================================== */
+
+        .user-message-wrapper {
+            display: flex;
+
+            flex-direction: column;
+
+            align-items: flex-end;
+
+            max-width: 72%;
+        }
+
+        .user-bubble {
+            display: block;
+
+            width: fit-content;
+
+            max-width: 680px;
+
+            padding: 11px 16px;
+
+            border-radius: 18px 18px 4px 18px;
+
+            background: #5548e8;
+
+            color: white;
+
+            font-size: 15px;
+
+            line-height: 1.5;
+
+            font-weight: 500;
+
+            overflow-wrap: anywhere;
+
+            word-break: break-word;
+
+            white-space: pre-wrap;
+        }
+
+
+        /* =====================================================
+           ASSISTANT MESSAGE
+           
+           IMPORTANT:
+           No box.
+           No border.
+           No shadow.
+           It now behaves like normal readable text.
+        ===================================================== */
+
+        .assistant-card {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 4px 0;
+            width: min(900px, 96%);
+        }
+
+        .assistant-header {
+            display: flex;
+
+            align-items: center;
+
+            gap: 8px;
+
+            margin-bottom: 10px;
+        }
+
+        .assistant-icon {
+            width: 27px;
+            height: 27px;
+
+            border-radius: 8px;
+
+            background: #eeeafe;
+
+            color: #5548e8;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            font-size: 12px;
+
+            font-weight: 700;
+
+            flex-shrink: 0;
+        }
+
+        .assistant-title {
+            font-size: 14px;
+
+            font-weight: 700;
+
+            color: #374151;
+        }
+
+
+        /* =====================================================
+           STATUS
+        ===================================================== */
+
+        .status {
+            display: inline-flex;
+
+            align-items: center;
+
+            padding: 5px 10px;
+
+            border-radius: 20px;
+
+            font-size: 11px;
+
+            font-weight: 600;
+
+            margin-bottom: 12px;
+        }
+
+        .status.success {
+            background: #dcfce7;
+
+            color: #166534;
+        }
+
+        .status.warning {
+            background: #fef3c7;
+
+            color: #92400e;
+        }
+
+        .status.danger {
+            background: #fee2e2;
+
+            color: #991b1b;
+        }
+
+        .status.info {
+            background: #e0e7ff;
+
+            color: #3730a3;
+        }
+
+
+        /* =====================================================
+           ANSWER SECTIONS
+        ===================================================== */
+
+        .answer-section {
+            margin-bottom: 15px;
+        }
+
+        .answer-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .answer-section-title {
+            font-size: 15px;
+
+            font-weight: 700;
+
+            color: #172033;
+
+            margin-bottom: 6px;
+        }
+
+        .answer-section-content {
+            font-size: 15px;
+
+            line-height: 1.7;
+
+            color: #273244;
+
+            overflow-wrap: anywhere;
+
+            word-break: break-word;
+        }
+
+        .answer-section-content strong {
+            font-weight: 700;
+
+            color: #172033;
+        }
+
+        .answer-section-content p {
+            margin: 0 0 8px;
+        }
+
+        .answer-section-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .answer-question {
+            margin-bottom: 18px;
+        }
+
+        .answer-question:last-child {
+            margin-bottom: 0;
+        }
+
+        .answer-question-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #172033;
+            margin-bottom: 10px;
+        }
+
+        /* =====================================================
+           BULLET LIST
+        ===================================================== */
+
+        .answer-list {
+            margin: 6px 0 0 22px;
+
+            padding: 0;
+        }
+
+        .answer-list li {
+            margin-bottom: 5px;
+
+            padding-left: 4px;
+
+            font-size: 15px;
+
+            line-height: 1.65;
+
+            color: #273244;
+        }
+
+        .answer-list li:last-child {
+            margin-bottom: 0;
+        }
+
+        .answer-list li::marker {
+            color: #6257ee;
+        }
+
+
+        /* =====================================================
+           STRUCTURED RESULT
+        ===================================================== */
+
+        .result-list {
+            margin: 9px 0 14px 22px;
+
+            padding: 0;
+        }
+
+        .result-list-item {
+            margin-bottom: 6px;
+
+            padding-left: 4px;
+
+            font-size: 14px;
+
+            line-height: 1.6;
+
+            color: #273244;
+        }
+
+        .result-list-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .result-list-item::marker {
+            color: #94a3b8;
+        }
+
+        .result-list-item strong {
+            font-weight: 700;
+
+            color: #172033;
+        }
+
+
+        /* =====================================================
+           SOURCES
+        ===================================================== */
+
+        .sources-section {
+            margin-top: 16px;
+
+            border-top: 1px solid #e5e7eb;
+
+            padding-top: 11px;
+        }
+
+        .section-label {
+            font-size: 11px;
+
+            color: #64748b;
+
+            margin-bottom: 7px;
+
+            font-weight: 700;
+        }
+
+        .sources-list {
+            display: flex;
+
+            flex-wrap: wrap;
+
+            gap: 6px;
+        }
+
+        .source-chip {
+            background: #f6f7fa;
+
+            border: 1px solid #e3e7ef;
+
+            color: #475569;
+
+            border-radius: 7px;
+
+            padding: 6px 8px;
+
+            font-size: 11px;
+
+            line-height: 1.3;
+
+            max-width: 100%;
+
+            overflow-wrap: anywhere;
+        }
+
+
+        /* =====================================================
+           TIME
+        ===================================================== */
+
+        .message-time {
+            font-size: 10px;
+
+            color: #a0a9b8;
+
+            margin-top: 5px;
+        }
+
+        .message-row.user .message-time {
+            text-align: right;
+        }
+
+
+        /* =====================================================
+           LOADING
+        ===================================================== */
+
+        .typing {
+            display: flex;
+
+            gap: 5px;
+
+            align-items: center;
+
+            padding: 5px 0;
+        }
+
+        .typing span {
+            width: 6px;
+
+            height: 6px;
+
+            border-radius: 50%;
+
+            background: #94a3b8;
+
+            animation: blink 1.2s infinite;
+        }
+
+        .typing span:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .typing span:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        @keyframes blink {
+
+            0%,
+            70%,
+            100% {
+                opacity: 0.25;
+            }
+
+            35% {
+                opacity: 1;
+            }
+        }
+
+
+        /* =====================================================
+           COMPOSER
+        ===================================================== */
+
+        .composer-area {
+            position: fixed;
+
+            bottom: 0;
+
+            left: 230px;
+
+            right: 0;
+
+            padding: 12px 28px 10px;
+
+            background:
+                linear-gradient(
+                    to top,
+                    #f5f7fb 72%,
+                    rgba(245, 247, 251, 0)
+                );
+        }
+
+        .composer {
+            max-width: 760px;
+
+            margin: 0 auto;
+
+            position: relative;
+        }
+
+        #question {
+            width: 100%;
+
+            min-height: 48px;
+
+            max-height: 120px;
+
+            resize: none;
+
+            border: 1px solid #d7dce5;
+
+            background: white;
+
+            border-radius: 14px;
+
+            padding: 13px 52px 13px 15px;
+
+            font-family: inherit;
+
+            font-size: 14px;
+
+            line-height: 1.5;
+
+            color: #172033;
+
+            outline: none;
+
+            box-shadow:
+                0 4px 14px rgba(
+                    15,
+                    23,
+                    42,
+                    0.06
+                );
+        }
+
+        #question:focus {
+            border-color: #8178f2;
+
+            box-shadow:
+                0 4px 16px rgba(
+                    79,
+                    70,
+                    229,
+                    0.12
+                );
+        }
+
+        #question::placeholder {
+            color: #a0a9b8;
+        }
+
+        #send-button {
+            position: absolute;
+
+            right: 8px;
+
+            bottom: 8px;
+
+            width: 32px;
+
+            height: 32px;
+
+            border: 0;
+
+            border-radius: 9px;
+
+            background: #5548e8;
+
+            color: white;
+
+            cursor: pointer;
+
+            font-size: 15px;
+        }
+
+        #send-button:hover {
+            background: #4639d6;
+        }
+
+        #send-button:disabled {
+            opacity: 0.5;
+
+            cursor: not-allowed;
+        }
+
+        .composer-hint {
+            text-align: center;
+
+            font-size: 9px;
+
+            color: #a0a9b8;
+
+            margin-top: 5px;
+        }
+
+
+        /* =====================================================
+           RESPONSIVE
+        ===================================================== */
+
+        @media (max-width: 700px) {
+
+            .sidebar {
+                width: 60px;
+
+                min-width: 60px;
+
+                padding: 14px 7px;
+            }
+
+            .brand {
+                justify-content: center;
+
+                padding: 0 0 18px;
+            }
+
+            .brand-text,
+            .recent-title,
+            .history,
+            .sidebar-footer {
+                display: none;
+            }
+
+            .new-chat-btn {
+                text-align: center;
+
+                font-size: 0;
+
+                padding: 10px 5px;
+            }
+
+            .new-chat-btn::before {
+                content: "+";
+
+                font-size: 17px;
+            }
+
+            .composer-area {
+                left: 60px;
+
+                padding-left: 10px;
+
+                padding-right: 10px;
+            }
+
+            .chat-wrapper {
+                padding-left: 12px;
+
+                padding-right: 12px;
+
+                padding-top: 6px;
+            }
+
+            .assistant-card {
+                width: 98%;
+            }
+
+            .user-message-wrapper {
+                max-width: 84%;
+            }
+
+            .user-bubble {
+                max-width: 100%;
+            }
+        }
+
+
+        @media (max-width: 450px) {
+
+            .topbar-title {
+                font-size: 12px;
+            }
+
+            .assistant-card {
+                width: 100%;
+            }
+
+            .user-message-wrapper {
+                max-width: 90%;
+            }
+
+            .welcome h1 {
+                font-size: 19px;
+            }
+
+            .welcome p {
+                font-size: 12px;
+            }
+
+            .answer-section-content,
+            .answer-list li {
+                font-size: 14px;
+            }
+        }
+
+    </style>
+
 </head>
 
+
 <body>
-    <h1>AI Travel Policy Assistant</h1>
 
-    <div id="chat">
-        <p>Ask a question about the company travel policy.</p>
-    </div>
 
-    <form id="question-form">
-        <input
-            type="text"
-            id="question"
-            placeholder="Ask a travel policy question..."
-            required
+    <!-- =====================================================
+         SIDEBAR
+    ===================================================== -->
+
+    <aside class="sidebar">
+
+        <div class="brand">
+
+            <div class="brand-icon">
+                ✈
+            </div>
+
+            <div class="brand-text">
+
+                <div class="brand-name">
+                    NovaTrix Travel
+                </div>
+
+                <div class="brand-subtitle">
+                    Policy Assistant
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <button
+            class="new-chat-btn"
+            id="new-chat-button"
         >
-        <button type="submit">Ask</button>
-    </form>
+            + New Chat
+        </button>
 
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+        <div class="recent-title">
+            Recent
+        </div>
+
+
+        <div
+            class="history"
+            id="history"
+        ></div>
+
+
+        <div class="sidebar-footer">
+            RAG · FAISS · LangGraph · Gemini
+        </div>
+
+    </aside>
+
+
+    <!-- =====================================================
+         MAIN
+    ===================================================== -->
+
+    <main class="main">
+
+
+        <header class="topbar">
+
+            <div class="topbar-title">
+                AI Travel & Policy Assistant
+            </div>
+
+            <div class="online">
+
+                <span class="online-dot"></span>
+
+                Online
+
+            </div>
+
+        </header>
+
+
+        <!-- =====================================================
+             CHAT
+        ===================================================== -->
+
+        <section class="chat-wrapper">
+
+            <div id="chat">
+
+                <div
+                    class="welcome"
+                    id="welcome"
+                >
+
+                    <div class="welcome-icon">
+                        ✈
+                    </div>
+
+                    <h1>
+                        How can I help with travel policy?
+                    </h1>
+
+                    <p>
+                        Ask about travel limits, employee eligibility,
+                        airport trips, approvals, or reimbursement.
+                    </p>
+
+
+                    <div class="suggestions">
+
+                        <button class="suggestion">
+                            What is the standard travel limit in India?
+                        </button>
+
+                        <button class="suggestion">
+                            Are airport trips allowed?
+                        </button>
+
+                        <button class="suggestion">
+                            Is EMP001 eligible?
+                        </button>
+
+                        <button class="suggestion">
+                            How much can I reimburse for a 2500 India trip?
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =====================================================
+             COMPOSER
+        ===================================================== -->
+
+        <div class="composer-area">
+
+            <form
+                class="composer"
+                id="question-form"
+            >
+
+                <textarea
+                    id="question"
+                    placeholder="Ask about travel policy..."
+                    rows="1"
+                    required
+                ></textarea>
+
+
+                <button
+                    id="send-button"
+                    type="submit"
+                    title="Send"
+                >
+                    ➤
+                </button>
+
+            </form>
+
+
+            <div class="composer-hint">
+                Press Enter to send · Shift + Enter for a new line
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <script>
+
+
+        /* =====================================================
+           ELEMENTS
+        ===================================================== */
+
+        const form =
+            document.getElementById(
+                "question-form"
+            );
+
+        const questionInput =
+            document.getElementById(
+                "question"
+            );
+
+        const chat =
+            document.getElementById(
+                "chat"
+            );
+
+        const welcome =
+            document.getElementById(
+                "welcome"
+            );
+
+        const sendButton =
+            document.getElementById(
+                "send-button"
+            );
+
+        const historyContainer =
+            document.getElementById(
+                "history"
+            );
+
+        const newChatButton =
+            document.getElementById(
+                "new-chat-button"
+            );
+
+
+        let currentThreadId = null;
+
+
+        /* =====================================================
+           ESCAPE HTML
+        ===================================================== */
+
+        function escapeHtml(value) {
+
+            if (
+                value === null ||
+                value === undefined
+            ) {
+                return "";
+            }
+
+            return String(value)
+                .replace(
+                    /&/g,
+                    "&amp;"
+                )
+                .replace(
+                    /</g,
+                    "&lt;"
+                )
+                .replace(
+                    />/g,
+                    "&gt;"
+                )
+                .replace(
+                    /"/g,
+                    "&quot;"
+                )
+                .replace(
+                    /'/g,
+                    "&#039;"
+                );
+        }
+
+
+        /* =====================================================
+           TIME
+        ===================================================== */
+
+        function getTime() {
+
+            return new Date()
+                .toLocaleTimeString(
+                    [],
+                    {
+                        hour: "numeric",
+                        minute: "2-digit"
+                    }
+                );
+        }
+
+
+        /* =====================================================
+           WELCOME
+        ===================================================== */
+
+        function hideWelcome() {
+
+            if (welcome) {
+                welcome.style.display =
+                    "none";
+            }
+        }
+
+
+        function showWelcome() {
+
+            if (welcome) {
+                welcome.style.display =
+                    "flex";
+            }
+        }
+
+
+        /* =====================================================
+           CLEAN MARKDOWN
+        ===================================================== */
+
+        function cleanMarkdown(text) {
+
+            if (!text) {
+                return "";
+            }
+
+            let value =
+                String(text).trim();
+
+
+            /*
+             * Remove standalone heading:
+             *
+             * **Answer**
+             */
+
+            value =
+                value.replace(
+                    /^\s*\*\*Answer\*\*\s*/i,
+                    ""
+                );
+
+
+            /*
+             * Gemini sometimes puts everything
+             * on one line:
+             *
+             * - **Answer:** ...
+             * - **Limit or requirement:** ...
+             *
+             * Convert those section markers
+             * into actual new lines.
+             */
+
+            value =
+                value.replace(
+                    /\s*-\s*\*\*(Answer|Limit or requirement|Approval needed)\s*:\*\*/gi,
+                    "\n**$1:**"
+                );
+
+
+            /*
+             * Also handle section markers without
+             * a preceding dash.
+             */
+
+            value =
+                value.replace(
+                    /\s+\*\*(Answer|Limit or requirement|Approval needed)\s*:\*\*/gi,
+                    "\n**$1:**"
+                );
+
+
+            return value.trim();
+        }
+
+
+        /* =====================================================
+           READABLE MARKDOWN
+        ===================================================== */
+
+        function formatReadableText(text) {
+
+            if (!text) {
+                return "";
+            }
+
+            let value =
+                escapeHtml(
+                    String(text).trim()
+                );
+
+            // Convert Markdown bold to HTML after escaping
+            value =
+                value.replace(
+                    /\*\*(.*?)\*\*/g,
+                    "<strong>$1</strong>"
+                );
+
+            const lines =
+                value.split(/\n/);
+
+            let html = "";
+            let inList = false;
+
+            lines.forEach(
+                line => {
+
+                    const trimmed = line.trim();
+
+                    if (!trimmed) {
+                        return;
+                    }
+
+                    // Bullet points
+                    if (
+                        trimmed.startsWith("- ") ||
+                        trimmed.startsWith("• ")
+                    ) {
+
+                        if (!inList) {
+                            html += '<ul class="answer-list">';
+                            inList = true;
+                        }
+
+                        html +=
+                            `<li>${trimmed.substring(2)}</li>`;
+
+                        return;
+                    }
+
+                    // Close list before normal text
+                    if (inList) {
+                        html += "</ul>";
+                        inList = false;
+                    }
+
+                    // Question heading
+                    if (
+                        /^Question\s+\d+:/i.test(trimmed)
+                    ) {
+
+                        html +=
+                            `<p class="answer-question-title">${trimmed}</p>`;
+
+                        return;
+                    }
+
+                    html +=
+                        `<p>${trimmed}</p>`;
+                }
+            );
+
+            if (inList) {
+                html += "</ul>";
+            }
+
+            return html;
+        }
+
+        
+        /* =====================================================
+           ANSWER FORMATTER
+        ===================================================== */
+
+        function formatAnswerHtml(answer) {
+
+            if (!answer) {
+                return "";
+            }
+
+            const text = cleanMarkdown(answer);
+
+            /*
+            * First check whether the response contains
+            * multiple numbered questions.
+            */
+            const questionRegex =
+                /(?:^|\n)\s*Question\s+(\d+):\s*([^\n]+)\s*([\s\S]*?)(?=\n\s*Question\s+\d+:|$)/gi;
+
+            const questions = [];
+
+            let match;
+
+            while (
+                (match = questionRegex.exec(text)) !== null
+            ) {
+
+                questions.push({
+                    number: match[1],
+                    question: match[2].trim(),
+                    body: match[3].trim()
+                });
+            }
+
+            /*
+            * Multiple-question response
+            */
+            if (questions.length > 1) {
+
+                return questions
+                    .map(
+                        question => {
+
+                            return `
+                                <div class="answer-question">
+
+                                    <div class="answer-question-title">
+                                        Question ${escapeHtml(question.number)}:
+                                        ${escapeHtml(question.question)}
+                                    </div>
+
+                                    ${formatPolicySections(question.body)}
+
+                                </div>
+                            `;
+                        }
+                    )
+                    .join("");
+            }
+
+            /*
+            * Normal single-question response
+            */
+            return formatPolicySections(text);
+        }
+
+
+        function formatPolicySections(text) {
+
+            const sectionRegex =
+                /(?:^|\n)\s*\*\*(Answer|Limit or requirement|Approval needed)\s*:\*\*\s*([\s\S]*?)(?=\n\s*\*\*(?:Answer|Limit or requirement|Approval needed)\s*:\*\*|$)/gi;
+
+            const sections = [];
+
+            let match;
+
+            while (
+                (match = sectionRegex.exec(text)) !== null
+            ) {
+
+                sections.push({
+                    title: match[1],
+                    content: match[2].trim()
+                });
+            }
+
+            /*
+            * If recognized policy sections exist,
+            * render each section separately.
+            */
+            if (sections.length > 0) {
+
+                return sections
+                    .map(
+                        section => {
+
+                            return `
+                                <div class="answer-section">
+
+                                    <div class="answer-section-title">
+                                        ${escapeHtml(section.title)}
+                                    </div>
+
+                                    <div class="answer-section-content">
+                                        ${formatReadableText(section.content)}
+                                    </div>
+
+                                </div>
+                            `;
+                        }
+                    )
+                    .join("");
+            }
+
+            /*
+            * Fallback for ordinary assistant responses
+            */
+            return `
+                <div class="answer-section-content">
+                    ${formatReadableText(text)}
+                </div>
+            `;
+        }
+
+
+
+        /* =====================================================
+           FIND ANSWER
+        ===================================================== */
+
+        function findAnswer(result) {
+
+            if (
+                !result ||
+                typeof result !== "object"
+            ) {
+                return null;
+            }
+
+
+            const possibleKeys = [
+
+                "answer",
+                "Answer",
+
+                "response",
+                "Response",
+
+                "message",
+                "Message"
+
+            ];
+
+
+            for (
+                const key
+                of possibleKeys
+            ) {
+
+                if (
+                    result[key] !== undefined &&
+                    result[key] !== null
+                ) {
+
+                    return result[key];
+                }
+
+            }
+
+
+            return null;
+        }
+
+
+        /* =====================================================
+           FIND SOURCES
+        ===================================================== */
+
+        function findSources(result) {
+
+            if (
+                !result ||
+                typeof result !== "object"
+            ) {
+                return [];
+            }
+
+
+            const possibleKeys = [
+
+                "sources",
+                "Sources",
+
+                "source",
+                "Source"
+
+            ];
+
+
+            for (
+                const key
+                of possibleKeys
+            ) {
+
+                if (
+                    result[key] !== undefined
+                ) {
+
+                    const value =
+                        result[key];
+
+
+                    if (
+                        Array.isArray(value)
+                    ) {
+
+                        return value;
+                    }
+
+
+                    return [value];
+                }
+
+            }
+
+
+            return [];
+        }
+
+
+        /* =====================================================
+           STATUS CLASS
+        ===================================================== */
+
+        function getStatusClass(
+            decision
+        ) {
+
+            const value =
+                String(
+                    decision || ""
+                ).toLowerCase();
+
+
+            if (
+                value.includes(
+                    "within policy"
+                ) ||
+                value === "eligible" ||
+                value.includes(
+                    "approved"
+                )
+            ) {
+
+                return "success";
+            }
+
+
+            if (
+                value.includes(
+                    "needs approval"
+                ) ||
+                value.includes(
+                    "approval required"
+                ) ||
+                value.includes(
+                    "approval"
+                )
+            ) {
+
+                return "warning";
+            }
+
+
+            if (
+                value.includes(
+                    "not eligible"
+                ) ||
+                value.includes(
+                    "invalid"
+                ) ||
+                value.includes(
+                    "error"
+                )
+            ) {
+
+                return "danger";
+            }
+
+
+            return "info";
+        }
+
+
+        /* =====================================================
+           FORMAT VALUE
+        ===================================================== */
+
+        function formatValue(value) {
+
+            if (
+                value === null ||
+                value === undefined
+            ) {
+
+                return "";
+            }
+
+
+            if (
+                typeof value === "object"
+            ) {
+
+                return JSON.stringify(
+                    value,
+                    null,
+                    2
+                );
+            }
+
+
+            return String(value);
+        }
+
+
+        /* =====================================================
+           ASSISTANT MESSAGE
+        ===================================================== */
+
+        function addAssistantMessage(
+            decision,
+            result,
+            time = getTime()
+        ) {
+
+            hideWelcome();
+
+
+            const row =
+                document.createElement(
+                    "div"
+                );
+
+            row.className =
+                "message-row assistant";
+
+
+            const statusClass =
+                getStatusClass(
+                    decision
+                );
+
+
+            const answer =
+                findAnswer(
+                    result
+                );
+
+
+            const sources =
+                findSources(
+                    result
+                );
+
+
+            let answerHtml = "";
+
+            let fieldsHtml = "";
+
+            let sourcesHtml = "";
+
+
+            /* =================================================
+               ANSWER
+            ================================================= */
+
+            if (answer) {
+
+                answerHtml =
+                    formatAnswerHtml(
+                        answer
+                    );
+            }
+
+
+            /* =================================================
+               STRUCTURED RESULT
+               
+               Convert JSON fields into readable bullets.
+            ================================================= */
+
+            if (
+                result &&
+                typeof result === "object" &&
+                !Array.isArray(result)
+            ) {
+
+                const ignoredKeys = [
+
+                    "answer",
+                    "Answer",
+
+                    "response",
+                    "Response",
+
+                    "message",
+                    "Message",
+
+                    "sources",
+                    "Sources",
+
+                    "source",
+                    "Source"
+
+                ];
+
+
+                const entries =
+                    Object.entries(
+                        result
+                    )
+                    .filter(
+                        ([key]) =>
+                            !ignoredKeys.includes(
+                                key
+                            )
+                    );
+
+
+                if (
+                    entries.length > 0
+                ) {
+
+                    fieldsHtml = `
+
+                        <ul class="result-list">
+
+                            ${
+                                entries
+                                    .map(
+                                        ([key, value]) => {
+
+                                            const label =
+                                                key
+                                                    .replace(
+                                                        /_/g,
+                                                        " "
+                                                    )
+                                                    .replace(
+                                                        /\b\w/g,
+                                                        c =>
+                                                            c.toUpperCase()
+                                                    );
+
+
+                                            return `
+
+                                                <li class="result-list-item">
+
+                                                    <strong>
+                                                        ${escapeHtml(
+                                                            label
+                                                        )}:
+                                                    </strong>
+
+                                                    ${escapeHtml(
+                                                        formatValue(
+                                                            value
+                                                        )
+                                                    )}
+
+                                                </li>
+
+                                            `;
+
+                                        }
+                                    )
+                                    .join("")
+                            }
+
+                        </ul>
+
+                    `;
+                }
+            }
+
+
+            /* =================================================
+               SOURCES
+            ================================================= */
+
+            if (
+                sources.length > 0
+            ) {
+
+                sourcesHtml = `
+
+                    <div class="sources-section">
+
+                        <div class="section-label">
+                            Sources
+                        </div>
+
+                        <div class="sources-list">
+
+                            ${
+                                sources
+                                    .map(
+                                        source => {
+
+                                            if (
+                                                typeof source === "object" &&
+                                                source !== null
+                                            ) {
+
+                                                const section =
+                                                    source.section ||
+                                                    source.title ||
+                                                    source.name ||
+                                                    "Policy source";
+
+
+                                                const file =
+                                                    source.source ||
+                                                    source.file ||
+                                                    "";
+
+
+                                                return `
+
+                                                    <div class="source-chip">
+
+                                                        ${escapeHtml(
+                                                            section
+                                                        )}
+
+                                                        ${
+                                                            file
+                                                                ? ` · ${escapeHtml(file)}`
+                                                                : ""
+                                                        }
+
+                                                    </div>
+
+                                                `;
+
+                                            }
+
+
+                                            return `
+
+                                                <div class="source-chip">
+
+                                                    ${escapeHtml(
+                                                        source
+                                                    )}
+
+                                                </div>
+
+                                            `;
+
+                                        }
+                                    )
+                                    .join("")
+                            }
+
+                        </div>
+
+                    </div>
+
+                `;
+            }
+
+
+            /* =================================================
+               FINAL ASSISTANT MESSAGE
+               
+               Notice:
+               NO BOX.
+            ================================================= */
+
+            row.innerHTML = `
+
+                <div class="assistant-card">
+
+
+                    <div class="assistant-header">
+
+                        <div class="assistant-icon">
+                            ✦
+                        </div>
+
+                        <div class="assistant-title">
+                            Travel Policy Assistant
+                        </div>
+
+                    </div>
+
+
+                    ${
+                        decision
+                            ? `
+
+                                <div class="status ${statusClass}">
+                                    ${escapeHtml(
+                                        decision
+                                    )}
+                                </div>
+
+                            `
+                            : ""
+                    }
+
+
+                    ${answerHtml}
+
+
+                    ${fieldsHtml}
+
+
+                    ${sourcesHtml}
+
+
+                    <div class="message-time">
+                        ${escapeHtml(
+                            time
+                        )}
+                    </div>
+
+
+                </div>
+
+            `;
+
+
+            chat.appendChild(
+                row
+            );
+
+
+            scrollToBottom();
+        }
+
+
+        /* =====================================================
+           USER MESSAGE
+        ===================================================== */
+
+        function addUserMessage(
+            text,
+            time = getTime()
+        ) {
+
+            hideWelcome();
+
+
+            const row =
+                document.createElement(
+                    "div"
+                );
+
+            row.className =
+                "message-row user";
+
+
+            row.innerHTML = `
+
+                <div class="user-message-wrapper">
+
+                    <div class="user-bubble">
+                        ${escapeHtml(
+                            text
+                        )}
+                    </div>
+
+                    <div class="message-time">
+                        ${escapeHtml(
+                            time
+                        )}
+                    </div>
+
+                </div>
+
+            `;
+
+
+            chat.appendChild(
+                row
+            );
+
+
+            scrollToBottom();
+        }
+
+
+        /* =====================================================
+           LOADING
+        ===================================================== */
+
+        function showLoading() {
+
+            hideWelcome();
+
+
+            const row =
+                document.createElement(
+                    "div"
+                );
+
+            row.className =
+                "message-row assistant";
+
+            row.id =
+                "loading-message";
+
+
+            row.innerHTML = `
+
+                <div class="assistant-card">
+
+                    <div class="assistant-header">
+
+                        <div class="assistant-icon">
+                            ✦
+                        </div>
+
+                        <div class="assistant-title">
+                            Travel Policy Assistant
+                        </div>
+
+                    </div>
+
+                    <div class="typing">
+
+                        <span></span>
+                        <span></span>
+                        <span></span>
+
+                    </div>
+
+                </div>
+
+            `;
+
+
+            chat.appendChild(
+                row
+            );
+
+
+            scrollToBottom();
+        }
+
+
+        function removeLoading() {
+
+            const loading =
+                document.getElementById(
+                    "loading-message"
+                );
+
+
+            if (loading) {
+                loading.remove();
+            }
+        }
+
+
+        /* =====================================================
+           SCROLL
+        ===================================================== */
+
+        function scrollToBottom() {
+
+            const wrapper =
+                document.querySelector(
+                    ".chat-wrapper"
+                );
+
+
+            setTimeout(
+                () => {
+
+                    wrapper.scrollTo({
+
+                        top:
+                            wrapper.scrollHeight,
+
+                        behavior:
+                            "smooth"
+
+                    });
+
+                },
+                50
+            );
+        }
+
+
+        /* =====================================================
+           SEND QUESTION
+        ===================================================== */
+
+        form.addEventListener(
+            "submit",
+            async function(event) {
+
+                event.preventDefault();
+
+
+                const question =
+                    questionInput.value.trim();
+
+
+                if (!question) {
+                    return;
+                }
+
+
+                /*
+                 * Immediately show user's question.
+                 */
+
+                addUserMessage(
+                    question
+                );
+
+
+                questionInput.value = "";
+
+                questionInput.style.height =
+                    "48px";
+
+
+                sendButton.disabled =
+                    true;
+
+
+                showLoading();
+
+
+                try {
+
+                    const response =
+                        await fetch(
+                            "/ask",
+                            {
+                                method:
+                                    "POST",
+
+                                headers: {
+                                    "Content-Type":
+                                        "application/json"
+                                },
+
+                                body:
+                                    JSON.stringify({
+                                        question:
+                                            question
+                                    })
+                            }
+                        );
+
+
+                    const data =
+                        await response.json();
+
+
+                    removeLoading();
+
+
+                    if (
+                        !response.ok
+                    ) {
+
+                        addAssistantMessage(
+                            "Error",
+                            {
+                                answer:
+                                    data.error ||
+                                    "The assistant could not process your request."
+                            }
+                        );
+
+                        return;
+                    }
+
+
+                    currentThreadId =
+                        data.thread_id ||
+                        currentThreadId;
+
+
+                    addAssistantMessage(
+                        data.decision,
+                        data.result
+                    );
+
+
+                    loadHistory();
+
+                }
+
+                catch (error) {
+
+                    removeLoading();
+
+
+                    console.error(
+                        "Request failed:",
+                        error
+                    );
+
+
+                    addAssistantMessage(
+                        "Error",
+                        {
+                            answer:
+                                "Unable to connect to the assistant."
+                        }
+                    );
+
+                }
+
+                finally {
+
+                    sendButton.disabled =
+                        false;
+
+                    questionInput.focus();
+                }
+
+            }
+        );
+
+
+        /* =====================================================
+           ENTER / SHIFT ENTER
+        ===================================================== */
+
+        questionInput.addEventListener(
+            "keydown",
+            function(event) {
+
+                if (
+                    event.key === "Enter" &&
+                    !event.shiftKey
+                ) {
+
+                    event.preventDefault();
+
+                    form.requestSubmit();
+                }
+
+            }
+        );
+
+
+        /* =====================================================
+           TEXTAREA AUTO RESIZE
+        ===================================================== */
+
+        questionInput.addEventListener(
+            "input",
+            function() {
+
+                this.style.height =
+                    "auto";
+
+
+                this.style.height =
+                    Math.min(
+                        this.scrollHeight,
+                        120
+                    ) + "px";
+
+            }
+        );
+
+
+        /* =====================================================
+           SUGGESTIONS
+        ===================================================== */
+
+        document
+            .querySelectorAll(
+                ".suggestion"
+            )
+            .forEach(
+                button => {
+
+                    button.addEventListener(
+                        "click",
+                        function() {
+
+                            questionInput.value =
+                                this.textContent.trim();
+
+
+                            questionInput.focus();
+
+
+                            questionInput.dispatchEvent(
+                                new Event(
+                                    "input"
+                                )
+                            );
+
+                        }
+                    );
+
+                }
+            );
+
+
+        /* =====================================================
+           LOAD HISTORY
+        ===================================================== */
+
+        async function loadHistory() {
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/history"
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                historyContainer.innerHTML =
+                    "";
+
+
+                data.conversations.forEach(
+                    conversation => {
+
+                        const button =
+                            document.createElement(
+                                "button"
+                            );
+
+
+                        button.className =
+                            "history-item";
+
+
+                        if (
+                            conversation.thread_id ===
+                            currentThreadId
+                        ) {
+
+                            button.classList.add(
+                                "active"
+                            );
+                        }
+
+
+                        button.textContent =
+                            conversation.title;
+
+
+                        button.title =
+                            conversation.title;
+
+
+                        button.addEventListener(
+                            "click",
+                            () => {
+
+                                loadConversation(
+                                    conversation.thread_id
+                                );
+
+                            }
+                        );
+
+
+                        historyContainer.appendChild(
+                            button
+                        );
+
+                    }
+                );
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    "Could not load history:",
+                    error
+                );
+
+            }
+
+        }
+
+
+        /* =====================================================
+           LOAD CONVERSATION
+        ===================================================== */
+
+        async function loadConversation(
+            threadId
+        ) {
+
+            try {
+
+                const response =
+                    await fetch(
+                        `/conversation/${threadId}`
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                currentThreadId =
+                    data.thread_id;
+
+
+                chat.innerHTML =
+                    "";
+
+
+                data.messages.forEach(
+                    message => {
+
+                        if (
+                            message.role ===
+                            "user"
+                        ) {
+
+                            addUserMessage(
+                                message.content,
+                                formatStoredTime(
+                                    message.created_at
+                                )
+                            );
+
+                        }
+
+                        else {
+
+                            const content =
+                                message.content ||
+                                {};
+
+
+                            addAssistantMessage(
+                                content.decision ||
+                                    "",
+
+                                content.result ||
+                                    {},
+
+                                formatStoredTime(
+                                    message.created_at
+                                )
+                            );
+
+                        }
+
+                    }
+                );
+
+
+                if (
+                    data.messages.length === 0
+                ) {
+
+                    chat.appendChild(
+                        welcome
+                    );
+
+                    showWelcome();
+
+                }
+
+
+                loadHistory();
+
+
+                scrollToBottom();
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    "Could not load conversation:",
+                    error
+                );
+
+            }
+
+        }
+
+
+        /* =====================================================
+           STORED TIME
+        ===================================================== */
+
+        function formatStoredTime(
+            value
+        ) {
+
+            if (!value) {
+                return getTime();
+            }
+
+
+            const date =
+                new Date(
+                    value
+                );
+
+
+            if (
+                Number.isNaN(
+                    date.getTime()
+                )
+            ) {
+
+                return getTime();
+            }
+
+
+            return date.toLocaleTimeString(
+                [],
+                {
+                    hour: "numeric",
+
+                    minute: "2-digit"
+                }
+            );
+        }
+
+
+        /* =====================================================
+           NEW CHAT
+        ===================================================== */
+
+        newChatButton.addEventListener(
+            "click",
+            async function() {
+
+                try {
+
+                    const response =
+                        await fetch(
+                            "/clear",
+                            {
+                                method:
+                                    "POST"
+                            }
+                        );
+
+
+                    const data =
+                        await response.json();
+
+
+                    currentThreadId =
+                        data.thread_id;
+
+
+                    chat.innerHTML =
+                        "";
+
+
+                    chat.appendChild(
+                        welcome
+                    );
+
+
+                    showWelcome();
+
+
+                    loadHistory();
+
+
+                    questionInput.focus();
+
+                }
+
+                catch (error) {
+
+                    console.error(
+                        "Could not start new chat:",
+                        error
+                    );
+
+                }
+
+            }
+        );
+
+
+        /* =====================================================
+           INITIAL LOAD
+        ===================================================== */
+
+        loadHistory();
+
+
+        questionInput.focus();
+
+    </script>
+
 </body>
+
 </html>
