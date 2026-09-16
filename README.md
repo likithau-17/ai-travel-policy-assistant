@@ -1,6 +1,6 @@
 # AI-Powered Travel & Policy Assistant
 
-An AI-powered corporate travel and policy assistant that answers fictional company travel-policy questions using **Retrieval-Augmented Generation (RAG)**, deterministic tools, conversational memory, and an agentic workflow.
+An AI-powered corporate travel and policy assistant that answers fictional company travel-policy questions using **Retrieval-Augmented Generation (RAG)**, deterministic business tools, conversational memory, and an agentic workflow.
 
 The project is designed as a training capstone for employee travel operations.
 
@@ -19,7 +19,7 @@ Employees often need quick answers to questions such as:
 
 Manually searching policy documents for these answers can be slow and may lead to inconsistent interpretation.
 
-This assistant combines **policy retrieval** with **deterministic business tools** so that policy questions are grounded in documents while calculations and eligibility decisions are handled programmatically.
+This assistant combines **policy retrieval** with **deterministic business tools** so that policy questions are answered using retrieved policy context while calculations and eligibility decisions are handled programmatically.
 
 ---
 
@@ -30,7 +30,7 @@ The assistant uses different components for different types of questions:
 * **RAG** retrieves relevant policy information from company policy documents.
 * **Business Tools** perform deterministic operations such as employee eligibility, trip validation, and reimbursement calculation.
 * **LangGraph Agent** decides whether a question should use RAG or a business tool.
-* **Conversational Memory** preserves employee and trip context across follow-up questions.
+* **Conversational Memory** preserves relevant employee and trip context across follow-up questions.
 * **MCP** exposes the core business tools through a Model Context Protocol server.
 * **Flask** provides the web interface and API endpoints.
 * **Gemini** generates the final employee-facing response.
@@ -48,28 +48,44 @@ The assistant uses different components for different types of questions:
                                 v
                        LangGraph AI Agent
                                 |
-                   +------------+------------+
-                   |                         |
-                   v                         v
-              RAG Pipeline             Business Tools
-                   |                         |
-                   v                         +--> Employee Eligibility
-            FAISS Vector Store             +--> Trip Validation
-                   |                       +--> Reimbursement
-                   v
-            Policy Documents
-                   |
-                   +------------+------------+
-                                |
-                                v
-                       Conversational Memory
-                                |
-                                v
-                             Gemini
-                                |
-                                v
-                           Response
+                 +--------------+--------------+
+                 |                             |
+                 v                             v
+            RAG Pipeline                 Business Tools
+                 |                             |
+                 v                    +--------+---------+
+          FAISS Vector Store          |        |         |
+                 |                    v        v         v
+                 v                Employee  Trip    Reimbursement
+          Policy Documents        Eligibility Validation Calculation
+                 |
+                 v
+          Retrieved Context
+
+                 +
+                 |
+                 v
+       Conversational Memory
+       (LangGraph Checkpointing)
+
+                 |
+                 v
+              Gemini
+                 |
+                 v
+             Response
+
+
+              MCP Server
+                  |
+        +---------+---------+
+        |         |         |
+        v         v         v
+    Eligibility  Trip   Reimbursement
+                  Tools
 ```
+
+The Flask application uses the LangGraph agent to route requests. The MCP server provides the same core business capabilities through the Model Context Protocol.
 
 ---
 
@@ -150,9 +166,29 @@ The RAG pipeline follows these steps:
 5. Store the embeddings in a FAISS vector index.
 6. Retrieve the most relevant policy chunks for a user question.
 7. Pass the retrieved context to Gemini.
-8. Generate an answer grounded only in the retrieved policy context.
+8. Generate an employee-facing answer using the retrieved policy context.
 
-This helps reduce the risk of the LLM relying on unsupported assumptions when answering policy questions.
+### Multi-Question Handling
+
+The RAG pipeline can also handle questions containing multiple policy requests.
+
+For example:
+
+```text
+What is the US travel limit and is late-night business travel allowed?
+```
+
+The question is split into individual requests:
+
+```text
+Question 1: What is the US travel limit?
+
+Question 2: Is late-night business travel allowed?
+```
+
+Each question is retrieved and answered independently before the results are combined into the final response.
+
+This helps prevent information relevant to one part of a question from being incorrectly applied to another part.
 
 ---
 
@@ -165,7 +201,7 @@ The LangGraph agent determines which action is appropriate for each question.
 Example:
 
 ```text
-"What is the standard travel limit in India?"
+What is the standard travel limit in India?
 ```
 
 The agent routes the question to the **RAG pipeline**.
@@ -175,7 +211,7 @@ The agent routes the question to the **RAG pipeline**.
 Example:
 
 ```text
-"Is EMP001 eligible?"
+Is EMP001 eligible?
 ```
 
 The agent calls the **employee eligibility tool**.
@@ -185,10 +221,10 @@ The agent calls the **employee eligibility tool**.
 Example:
 
 ```text
-"Can EMP001 take a 2500 India business trip?"
+Can EMP001 take a 2500 India business trip?
 ```
 
-The agent validates:
+The agent validates the relevant employee and trip information, including:
 
 * Employee eligibility
 * Country
@@ -202,10 +238,22 @@ The agent validates:
 Example:
 
 ```text
-"How much can I reimburse for a 2500 India trip?"
+How much can I reimburse for a 2500 India trip?
 ```
 
 The reimbursement tool calculates the applicable reimbursable amount.
+
+### Improved Routing
+
+The agent distinguishes between:
+
+* Policy-information requests
+* Employee eligibility requests
+* Trip validation requests
+* Reimbursement requests
+* Out-of-domain questions
+
+Specific trip-action questions are routed to deterministic tools instead of being treated as ordinary policy-retrieval questions.
 
 ---
 
@@ -223,6 +271,8 @@ Validates a business trip against the applicable travel policy.
 
 Calculates the reimbursable amount based on the applicable country limit.
 
+These operations are deterministic and do not require the LLM to perform the underlying business calculation.
+
 ---
 
 ## Conversational Memory
@@ -233,19 +283,30 @@ For example:
 
 ```text
 User:
+
 Can EMP001 take a 1500 India business trip?
 
 Assistant:
+
 Within Policy
 
 User:
+
 What if it costs 2500?
 
 Assistant:
+
 Needs Approval
 ```
 
-The second question does not repeat the employee ID because the assistant retains the previous conversational context.
+The second question does not repeat the employee ID because the assistant can reuse relevant context from the previous conversation.
+
+The memory layer can preserve information such as:
+
+* Employee ID
+* Country
+* Previous trip context
+* Previous user messages
 
 The Flask application also provides a `/clear` endpoint to start a fresh conversation.
 
@@ -266,6 +327,8 @@ Run the MCP demo from the project root:
 ```bash
 python -m mcp_server.client_demo
 ```
+
+The MCP layer provides a standard interface through which compatible MCP clients can discover and invoke the business tools.
 
 ---
 
@@ -310,6 +373,34 @@ http://127.0.0.1:5000
 
 ---
 
+## Web Interface
+
+The Flask application provides a chat-based interface for interacting with the assistant.
+
+The interface supports:
+
+* Sending travel-policy questions
+* Displaying assistant responses
+* Showing policy sources
+* Maintaining the current conversation
+* Starting a fresh conversation
+* Displaying errors in a user-friendly format
+* Rendering structured policy responses
+
+Responses can contain sections such as:
+
+```text
+Answer
+
+Limit or requirement
+
+Approval needed
+```
+
+when those sections are applicable.
+
+---
+
 ## Testing
 
 The project contains automated tests covering:
@@ -327,7 +418,7 @@ Run all tests:
 python -m pytest -q
 ```
 
-Current test result:
+Current verified test result:
 
 ```text
 38 passed
@@ -370,7 +461,9 @@ Examples include questions about:
 * Unknown country limits
 * Unlisted policy rules
 
-The expected behavior is to avoid inventing information and instead state that the available policy context does not support the requested information.
+The expected behavior is to avoid inventing unsupported policy information and instead state when the available policy context does not provide enough information.
+
+The system's prompts instruct Gemini to use the retrieved policy context as the authoritative source for policy answers. This reduces unsupported responses but does not guarantee that an LLM can never generate incorrect information.
 
 ---
 
@@ -389,7 +482,7 @@ The prompt explicitly treats the retrieved policy context as the authoritative s
 * Avoid combining unrelated policy statements.
 * Distinguish supported information from information that cannot be determined.
 
-This improves resistance to hallucinated policy rules.
+This improves the consistency of policy-grounded responses.
 
 ### Improvement 2 — Clearer Employee-Facing Responses
 
@@ -399,7 +492,9 @@ The prompt provides a clearer response structure:
 
 ```text
 Answer
+
 Limit or requirement
+
 Approval needed
 ```
 
@@ -459,6 +554,10 @@ Are late-night trips allowed?
 What information is required for an expense?
 ```
 
+```text
+What is the US travel limit and is late-night business travel allowed?
+```
+
 ### Employee Eligibility
 
 ```text
@@ -501,6 +600,8 @@ Can EMP001 take a 1500 India business trip?
 What if it costs 2500?
 ```
 
+The second question can use the context from the previous interaction.
+
 ---
 
 ## Limitations
@@ -511,6 +612,7 @@ What if it costs 2500?
 * Gemini API availability and quotas can affect live LLM responses.
 * The current system supports the countries and rules represented in the provided policy documents.
 * Complex policy questions outside the available policy context may require human review.
+* LLM-generated responses may still require validation for high-impact business decisions.
 
 ---
 
@@ -522,14 +624,25 @@ The capstone implementation is completed with the following components:
 * FAISS semantic search
 * Gemini LLM integration
 * LangGraph agent workflow
+* Improved intent and action routing
 * Deterministic business tools
 * Conversational memory
+* Multi-question RAG handling
 * MCP tool server
 * Flask web application
+* Structured employee-facing responses
+* Policy source display
 * Automated testing
 * Hallucination testing
 * Error handling
 * Prompt evaluation and improvements
+* Web interface improvements
+
+The final automated test suite currently passes:
+
+```text
+38 passed
+```
 
 ---
 
@@ -537,4 +650,16 @@ The capstone implementation is completed with the following components:
 
 The **AI-Powered Travel & Policy Assistant** demonstrates how RAG, deterministic business logic, agentic workflows, conversational memory, MCP, and a web API can be combined to build a practical enterprise AI assistant.
 
-The architecture separates **policy knowledge retrieval** from **deterministic business decisions**, allowing the system to provide grounded policy answers while using programmatic tools for eligibility, trip validation, and reimbursement calculations.
+The architecture separates **policy knowledge retrieval** from **deterministic business decisions**, allowing the system to provide policy answers using retrieved documents while using programmatic tools for eligibility, trip validation, and reimbursement calculations.
+
+The project also demonstrates practical considerations for enterprise AI systems, including:
+
+* Tool-based decision making
+* Conversation context
+* Multi-question handling
+* Source-aware responses
+* Error handling
+* Unsupported-information handling
+* Automated testing
+* LLM prompt improvement
+* MCP-based tool exposure
